@@ -13,6 +13,7 @@ import DisputeForm from "../components/DisputeForm";
 import ContactOrganizerButton from "../components/ContactOrganizerButton";
 import ReportButton from "../components/ReportButton";
 import EditTournamentModal from "../components/EditTournamentModal";
+import { playSound } from "../utils/sound";
 import StatusBadge from "../components/StatusBadge";
 
 function getStatusLabel(status: string) {
@@ -86,6 +87,7 @@ export default function TournamentDetail() {
       const res = await api.tournaments.generateBrackets(tournament.id);
       const updated = await api.tournaments.get(tournament.id);
       setTournament(updated);
+      playSound("matchStart");
       showMsg("success", `${res.matches} matchs générés !`);
     } catch (err: any) {
       showMsg("error", err.message);

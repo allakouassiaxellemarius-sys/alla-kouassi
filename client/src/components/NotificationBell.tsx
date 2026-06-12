@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import { playSound } from "../utils/sound";
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  const prevUnread = useRef(0);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,6 +16,11 @@ export default function NotificationBell() {
     api.notifications.list().then(setNotifications).catch(() => {});
     api.notifications.unreadCount().then((r) => setUnread(r.count)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (unread > prevUnread.current) playSound("notification");
+    prevUnread.current = unread;
+  }, [unread]);
 
   useEffect(() => {
     const interval = setInterval(() => {

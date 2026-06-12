@@ -1,10 +1,18 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { playSound } from "../utils/sound";
 
 export default function WinnerSection({ tournament, teams, matches }: {
   tournament: any;
   teams: any[];
   matches: any[];
 }) {
+  useEffect(() => {
+    if (tournament.status === "completed") {
+      playSound("victory");
+    }
+  }, [tournament.status]);
+
   if (tournament.status !== "completed") return null;
 
   const lastRound = Math.max(...matches.map((m: any) => m.round), 0);

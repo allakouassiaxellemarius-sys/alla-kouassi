@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api } from "../services/api";
+import { playSound } from "../utils/sound";
 
 export default function ScoreReportForm({
   match,
@@ -33,12 +34,13 @@ export default function ScoreReportForm({
       setMsg({ type: "error", text: "Les scores ne peuvent pas être égaux (pas de match nul en élimination directe)" });
       return;
     }
-    setSending(true);
-    setMsg(null);
-    try {
-      await api.matches.updateScore(match.id, s1, s2);
-      setMsg({ type: "success", text: "Score enregistré !" });
-      onScoreSubmitted();
+      setSending(true);
+      setMsg(null);
+      try {
+        await api.matches.updateScore(match.id, s1, s2);
+        playSound("score");
+        setMsg({ type: "success", text: "Score enregistré !" });
+        onScoreSubmitted();
     } catch (err: any) {
       setMsg({ type: "error", text: err.message || "Erreur lors de l'envoi" });
     }

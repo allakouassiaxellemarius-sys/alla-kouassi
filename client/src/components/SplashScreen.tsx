@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import "./SplashScreen.css";
+import { playSound } from "../utils/sound";
 
 const sequence = [
   { status: "Initialisation", text: "Connexion à l'arène. Vérification des équipes. Chargement du mode compétition.", score: "0 — 0", badge: "Boot sequence" },
@@ -19,6 +20,8 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
     }, 2600);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => { playSound("efootball"); }, []);
 
   const handleEnter = useCallback(() => {
     if (entered) return;
