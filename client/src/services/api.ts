@@ -67,6 +67,8 @@ export const api = {
       request<{ message: string }>(`/tournaments/${tournamentId}/close`, { method: "POST" }),
     delete: (id: string) =>
       request<{ message: string }>(`/tournaments/${id}`, { method: "DELETE" }),
+    update: (id: string, data: any) =>
+      request<any>(`/tournaments/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     approveTeam: (tournamentId: string, teamId: string) =>
       request<{ message: string }>(`/tournaments/${tournamentId}/approve-team`, {
         method: "POST",

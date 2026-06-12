@@ -12,6 +12,7 @@ import ScoreReportForm from "../components/ScoreReportForm";
 import DisputeForm from "../components/DisputeForm";
 import ContactOrganizerButton from "../components/ContactOrganizerButton";
 import ReportButton from "../components/ReportButton";
+import EditTournamentModal from "../components/EditTournamentModal";
 import StatusBadge from "../components/StatusBadge";
 
 function getStatusLabel(status: string) {
@@ -52,6 +53,7 @@ export default function TournamentDetail() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [actionMsg, setActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -229,14 +231,21 @@ export default function TournamentDetail() {
               )}
             </div>
           </div>
-          {isOrganizer && tournament.status === "upcoming" && (
-            <button
-              onClick={handleGenerateBrackets}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-green-900/40 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-              Générer les brackets
-            </button>
+          {isOrganizer && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setShowEdit(true)}
+                className="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-200 font-medium px-5 py-3 rounded-xl transition w-full sm:w-auto border border-gray-700">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                Modifier
+              </button>
+              {tournament.status === "upcoming" && (
+                <button onClick={handleGenerateBrackets}
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold px-5 py-3 rounded-xl shadow-lg shadow-green-900/40 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                  Générer les brackets
+                </button>
+              )}
+            </div>
           )}
         </div>
         {tournament.description && (
@@ -622,6 +631,16 @@ export default function TournamentDetail() {
           )}
         </div>
       </div>
+      {showEdit && (
+        <EditTournamentModal
+          tournament={tournament}
+          onClose={() => setShowEdit(false)}
+          onSaved={(updated: any) => {
+            setTournament({ ...tournament, ...updated });
+            setShowEdit(false);
+          }}
+        />
+      )}
     </div>
   );
 }

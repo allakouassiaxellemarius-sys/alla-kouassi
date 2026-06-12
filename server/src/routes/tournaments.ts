@@ -625,6 +625,52 @@ router.post("/:id/close", authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
+router.put("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = pid(req.params.id);
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut modifier le tournoi" });
+      return;
+    }
+    const tournament = await prisma.tournament.findUnique({ where: { id } });
+    if (!tournament) {
+      res.status(404).json({ error: "Tournoi non trouvé" });
+      return;
+    }
+    const { name, description, game, maxTeams, minTeams, prizePool, startDate, format, rules, level, region, matchDuration, pointsForWin, pointsForDraw, pointsForLoss, allowDraw, registrationType } = req.body;
+    const updated = await prisma.tournament.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(game !== undefined && { game }),
+        ...(maxTeams !== undefined && { maxTeams: parseInt(maxTeams) || 16 }),
+        ...(minTeams !== undefined && { minTeams: parseInt(minTeams) || 2 }),
+        ...(prizePool !== undefined && { prizePool }),
+        ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+        ...(format !== undefined && { format }),
+        ...(rules !== undefined && { rules }),
+        ...(level !== undefined && { level }),
+        ...(region !== undefined && { region }),
+        ...(matchDuration !== undefined && { matchDuration: matchDuration ? parseInt(matchDuration) : null }),
+        ...(pointsForWin !== undefined && { pointsForWin: parseInt(pointsForWin) || 3 }),
+        ...(pointsForDraw !== undefined && { pointsForDraw: parseInt(pointsForDraw) || 1 }),
+        ...(pointsForLoss !== undefined && { pointsForLoss: parseInt(pointsForLoss) || 0 }),
+        ...(allowDraw !== undefined && { allowDraw: allowDraw === true || allowDraw === "true" }),
+        ...(registrationType !== undefined && { registrationType }),
+      },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 router.delete("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
