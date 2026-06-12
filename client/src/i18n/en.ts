@@ -27,6 +27,18 @@ const en = {
     matches: "Matches",
     teams: "Teams",
     rules: "Rules",
+    approveTeam: "Approve",
+    rejectTeam: "Reject",
+    pendingApproval: "Pending approval",
+    registrationType: {
+      auto: "Auto registration",
+      manual: "Manual validation",
+    },
+    approvalStatus: {
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+    },
     status: {
       upcoming: "Upcoming",
       ongoing: "Ongoing",
@@ -59,6 +71,8 @@ const en = {
     reportScore: "Report score",
     contactOrganizer: "Contact organizer",
     remindScore: "Remind teams",
+    score1: "Score team 1",
+    score2: "Score team 2",
   },
   organizer: {
     title: "Organizer space",
@@ -71,6 +85,7 @@ const en = {
     close: "Close",
     delete: "Delete",
     generateBrackets: "Generate brackets",
+    editTournament: "Edit tournament",
   },
   profile: {
     teams: "Teams",
@@ -109,6 +124,8 @@ const en = {
     no: "No",
     back: "Back",
     export: "Export",
+    edit: "Edit",
+    score: "Score",
   },
   spectator: {
     title: "Spectator mode",
@@ -116,6 +133,7 @@ const en = {
     offline: "Offline",
     players: "spectators",
     stream: "Watch stream",
+    watch: "Watch",
   },
 };
 

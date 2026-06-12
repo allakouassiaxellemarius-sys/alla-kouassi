@@ -27,6 +27,18 @@ const fr = {
     matches: "Matchs",
     teams: "Équipes",
     rules: "Règles",
+    approveTeam: "Approuver",
+    rejectTeam: "Rejeter",
+    pendingApproval: "En attente d'approbation",
+    registrationType: {
+      auto: "Inscription automatique",
+      manual: "Validation manuelle",
+    },
+    approvalStatus: {
+      pending: "En attente",
+      approved: "Approuvé",
+      rejected: "Rejeté",
+    },
     status: {
       upcoming: "Programmé",
       ongoing: "En cours",
@@ -59,6 +71,8 @@ const fr = {
     reportScore: "Saisir le score",
     contactOrganizer: "Contacter l'organisateur",
     remindScore: "Relancer les équipes",
+    score1: "Score équipe 1",
+    score2: "Score équipe 2",
   },
   organizer: {
     title: "Espace organisateur",
@@ -71,6 +85,7 @@ const fr = {
     close: "Clôturer",
     delete: "Supprimer",
     generateBrackets: "Générer les matchs",
+    editTournament: "Modifier le tournoi",
   },
   profile: {
     teams: "Équipes",
@@ -109,6 +124,8 @@ const fr = {
     no: "Non",
     back: "Retour",
     export: "Exporter",
+    edit: "Modifier",
+    score: "Score",
   },
   spectator: {
     title: "Mode spectateur",
@@ -116,6 +133,7 @@ const fr = {
     offline: "Hors ligne",
     players: "spectateurs",
     stream: "Regarder le stream",
+    watch: "Regarder",
   },
 };
 
