@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import DisputeResolve from "../components/DisputeResolve";
+import PremiumGallery from "../components/PremiumGallery";
 
 export default function Organizer() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export default function Organizer() {
   const [allTournaments, setAllTournaments] = useState<any[]>([]);
   const [disputes, setDisputes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"overview" | "validations" | "disputes" | "send">("overview");
+  const [tab, setTab] = useState<"overview" | "validations" | "disputes" | "send" | "gallery">("overview");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -94,6 +95,7 @@ export default function Organizer() {
           { id: "validations" as const, label: `Scores à valider (${pendingScores.length})` },
           { id: "disputes" as const, label: `Litiges (${pendingDisputes.length})` },
           { id: "send" as const, label: "Envoyer une consigne" },
+          { id: "gallery" as const, label: "Galerie" },
         ].map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`text-xs px-3 py-2 rounded-t-lg transition whitespace-nowrap ${tab === t.id ? "bg-gray-800 text-white border-b-2 border-purple-500" : "text-gray-500 hover:text-gray-300"}`}>
             {t.label}
@@ -238,6 +240,8 @@ export default function Organizer() {
           <SendForm tournaments={organizedTournaments} />
         </div>
       )}
+
+      {tab === "gallery" && <PremiumGallery />}
     </div>
   );
 }
