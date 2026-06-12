@@ -9,11 +9,18 @@
     "dev:client": "cd client && npm run dev",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "build": "cd client && npm run build",
-    "build:vercel": "npx prisma generate --schema=server/prisma/schema.prisma && cd client && npm install && npm run build"
+    "build:vercel": "npx prisma generate --schema=server/prisma/schema.prisma && cd client && npm run build"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.4",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
     "concurrently": "^9.1.2",
-    "prisma": "^6.6.0"
+    "prisma": "^6.6.0",
+    "tailwindcss": "^4.1.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.2"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
@@ -21,6 +28,9 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.5.1",
     "uuid": "^11.1.0",
     "vercel": "^54.12.2"
   }
