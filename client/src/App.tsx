@@ -19,11 +19,18 @@ import Help from "./pages/Help";
 import Organizer from "./pages/Organizer";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import SplashScreen from "./components/SplashScreen";
 import { api } from "./services/api";
 
 export default function App() {
+  const [splash, setSplash] = useState(!localStorage.getItem("splashDone"));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleSplashFinish = () => {
+    localStorage.setItem("splashDone", "1");
+    setSplash(false);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -37,6 +44,10 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  if (splash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
 
   if (loading) {
     return (
