@@ -9,7 +9,7 @@ export default function WinnerSection({ tournament, teams, matches }: {
 }) {
   useEffect(() => {
     if (tournament.status === "completed") {
-      playSound("victory");
+      playSound("success");
     }
   }, [tournament.status]);
 

@@ -21,7 +21,7 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => { playSound("efootball"); }, []);
+  useEffect(() => { playSound("notify"); }, []);
 
   const handleEnter = useCallback(() => {
     if (entered) return;

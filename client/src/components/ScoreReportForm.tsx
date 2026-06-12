@@ -38,7 +38,7 @@ export default function ScoreReportForm({
       setMsg(null);
       try {
         await api.matches.updateScore(match.id, s1, s2);
-        playSound("score");
+        playSound("success");
         setMsg({ type: "success", text: "Score enregistré !" });
         onScoreSubmitted();
     } catch (err: any) {

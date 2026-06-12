@@ -87,7 +87,7 @@ export default function TournamentDetail() {
       const res = await api.tournaments.generateBrackets(tournament.id);
       const updated = await api.tournaments.get(tournament.id);
       setTournament(updated);
-      playSound("matchStart");
+      playSound("click");
       showMsg("success", `${res.matches} matchs générés !`);
     } catch (err: any) {
       showMsg("error", err.message);

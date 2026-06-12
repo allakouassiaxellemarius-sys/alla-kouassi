@@ -18,7 +18,7 @@ export default function NotificationBell() {
   }, []);
 
   useEffect(() => {
-    if (unread > prevUnread.current) playSound("notification");
+    if (unread > prevUnread.current) playSound("notify");
     prevUnread.current = unread;
   }, [unread]);
 
