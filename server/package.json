@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node --import tsx dist/index.js",
+    "start": "node dist/index.js",
     "db:push": "prisma db push",
     "db:seed": "tsx src/prisma/seed.ts",
     "db:push:render": "cp prisma/schema.render.prisma prisma/schema.prisma && npx prisma db push",
