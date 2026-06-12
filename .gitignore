@@ -6,3 +6,5 @@ dist/
 .env.local
 client/dist/
 .DS_Store
+
+.vercel
