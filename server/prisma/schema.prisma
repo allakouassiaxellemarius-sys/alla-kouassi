@@ -14,7 +14,13 @@ model User {
   username  String   @unique
   password  String
   avatar    String?
+  bio       String?
+  country   String?
+  twitter   String?
+  discord   String?
   role      String   @default("user")
+  banned    Boolean  @default(false)
+  banReason String?
   deviceId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -25,6 +31,7 @@ model User {
   notifications Notification[]
   disputes     Dispute[]
   badges       Badge[]
+  reports      Report[]
 }
 
 model Team {
@@ -50,20 +57,28 @@ model TeamMember {
 }
 
 model Tournament {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  game        String?
-  maxTeams    Int      @default(16)
-  minTeams    Int      @default(2)
-  prizePool   String?
-  startDate   DateTime?
-  endDate     DateTime?
-  status      String   @default("upcoming")
-  format      String   @default("single_elimination")
-  rules       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  game          String?
+  maxTeams      Int      @default(16)
+  minTeams      Int      @default(2)
+  prizePool     String?
+  startDate     DateTime?
+  endDate       DateTime?
+  status        String   @default("upcoming")
+  format        String   @default("single_elimination")
+  level         String   @default("all")
+  region        String?
+  matchDuration Int?
+  pointsForWin  Int      @default(3)
+  pointsForDraw Int      @default(1)
+  pointsForLoss Int      @default(0)
+  allowDraw     Boolean  @default(false)
+  registrationType String @default("auto")
+  rules         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   organizers    TournamentOrganizer[]
   teams         TournamentTeam[]
@@ -86,6 +101,8 @@ model TournamentTeam {
   tournamentId  String
   seed          Int?
   status        String     @default("registered")
+  approvalStatus String    @default("approved")
+  points        Int        @default(0)
   team          Team       @relation(fields: [teamId], references: [id])
   tournament    Tournament @relation(fields: [tournamentId], references: [id])
 }
@@ -109,6 +126,8 @@ model Match {
   delayReportedBy String?
   scoreReportedBy String?
   scoreApprovedBy String?
+  spectatorCount  Int      @default(0)
+  streamUrl       String?
   log             String   @default("[]")
   createdAt       DateTime @default(now())
 
@@ -165,6 +184,19 @@ model ResetToken {
   createdAt DateTime @default(now())
 }
 
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String
+  targetId    String
+  targetType  String   @default("user")
+  reason      String
+  description String?
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+
+  reporter    User     @relation(fields: [reporterId], references: [id])
+}
+
 model Dispute {
   id          String   @id @default(uuid())
   matchId     String
@@ -175,6 +207,7 @@ model Dispute {
   status      String   @default("open")
   resolvedBy  String?
   resolution  String?
+  targetTeamId String?
   createdAt   DateTime @default(now())
 
   match      Match      @relation(fields: [matchId], references: [id])

@@ -34,9 +34,12 @@ export const api = {
     me: () => request<import("../types").User>("/auth/me"),
   },
   tournaments: {
-    list: () => request<import("../types").Tournament[]>("/tournaments"),
+    list: (params?: { search?: string; game?: string; level?: string; region?: string; status?: string; format?: string; sort?: string }) => {
+      const qs = params ? "?" + new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([_, v]) => v))).toString() : "";
+      return request<import("../types").Tournament[]>(`/tournaments${qs}`);
+    },
     get: (id: string) => request<import("../types").Tournament>(`/tournaments/${id}`),
-    create: (data: Partial<import("../types").Tournament>) =>
+    create: (data: any) =>
       request<import("../types").Tournament>("/tournaments", {
         method: "POST",
         body: JSON.stringify(data),
@@ -64,6 +67,18 @@ export const api = {
       request<{ message: string }>(`/tournaments/${tournamentId}/close`, { method: "POST" }),
     delete: (id: string) =>
       request<{ message: string }>(`/tournaments/${id}`, { method: "DELETE" }),
+    approveTeam: (tournamentId: string, teamId: string) =>
+      request<{ message: string }>(`/tournaments/${tournamentId}/approve-team`, {
+        method: "POST",
+        body: JSON.stringify({ teamId }),
+      }),
+    rejectTeam: (tournamentId: string, teamId: string) =>
+      request<{ message: string }>(`/tournaments/${tournamentId}/reject-team`, {
+        method: "POST",
+        body: JSON.stringify({ teamId }),
+      }),
+    spectate: (matchId: string) =>
+      request<{ spectatorCount: number }>(`/tournaments/${matchId}/spectate`, { method: "POST" }),
   },
   teams: {
     list: () => request<import("../types").Team[]>("/teams"),
@@ -77,6 +92,8 @@ export const api = {
       request<import("../types").TeamMember>(`/teams/${teamId}/join`, { method: "POST" }),
   },
   matches: {
+    listByTournament: (tournamentId: string) =>
+      request<import("../types").Match[]>(`/matches/tournament/${tournamentId}`),
     updateScore: (matchId: string, score1: number, score2: number) =>
       request<import("../types").Match>(`/matches/${matchId}/score`, {
         method: "PATCH",
@@ -95,13 +112,17 @@ export const api = {
   },
   users: {
     leaderboard: () =>
-      request<{ id: string; username: string; avatar?: string; tournamentsPlayed: number }[]>("/users/leaderboard"),
+      request<any[]>("/users/leaderboard"),
     get: (id: string) =>
-      request<import("../types").User & { teams: import("../types").TeamMember[] }>(`/users/${id}`),
+      request<any>(`/users/${id}`),
+    getMe: () =>
+      request<any>("/users/me"),
+    updateMe: (data: { username?: string; bio?: string; country?: string; twitter?: string; discord?: string }) =>
+      request<any>("/users/me", { method: "PATCH", body: JSON.stringify(data) }),
   },
   notifications: {
     list: () =>
-      request<{ id: string; userId: string; type: string; title: string; message: string; link?: string; read: boolean; createdAt: string }[]>("/notifications"),
+      request<any[]>("/notifications"),
     unreadCount: () =>
       request<{ count: number }>("/notifications/unread-count"),
     markRead: (id: string) =>
@@ -125,5 +146,12 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ status, resolution }),
       }),
+  },
+  reports: {
+    create: (data: { targetId: string; targetType?: string; reason: string; description?: string }) =>
+      request<any>("/reports", { method: "POST", body: JSON.stringify(data) }),
+    list: () => request<any[]>("/reports"),
+    resolve: (id: string, status: string) =>
+      request<any>(`/reports/${id}/resolve`, { method: "PATCH", body: JSON.stringify({ status }) }),
   },
 };

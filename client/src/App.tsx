@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+import I18nProvider from "./i18n/I18nProvider";
 import Layout from "./components/Layout/Layout";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Home from "./pages/Home";
@@ -19,6 +20,7 @@ import Help from "./pages/Help";
 import Organizer from "./pages/Organizer";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Spectate from "./pages/Spectate";
 import SplashScreen from "./components/SplashScreen";
 import { api } from "./services/api";
 
@@ -58,49 +60,52 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route element={<Layout user={user} onLogout={() => setUser(null)} />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login onLogin={setUser} />} />
-        <Route path="/register" element={<Register onLogin={setUser} />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route
-          path="/dashboard"
-          element={
+    <I18nProvider>
+      <Routes>
+        <Route element={<Layout user={user} onLogout={() => setUser(null)} />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login onLogin={setUser} />} />
+          <Route path="/register" element={<Register onLogin={setUser} />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute user={user}>
+                <Dashboard user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/tournaments/create" element={
             <ProtectedRoute user={user}>
-              <Dashboard user={user} />
+              <CreateTournament />
             </ProtectedRoute>
-          }
-        />
-        <Route path="/tournaments" element={<Tournaments />} />
-        <Route path="/tournaments/create" element={
-          <ProtectedRoute user={user}>
-            <CreateTournament />
-          </ProtectedRoute>
-        } />
-        <Route path="/tournaments/:id" element={<TournamentDetail />} />
-        <Route path="/teams" element={<Teams />} />
-        <Route path="/teams/create" element={
-          <ProtectedRoute user={user}>
-            <CreateTeam />
-          </ProtectedRoute>
-        } />
-        <Route path="/teams/:id" element={<TeamDetail />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/profile/:id?" element={<Profile />} />
-        <Route path="/notifications" element={
-          <ProtectedRoute user={user}>
-            <Notifications />
-          </ProtectedRoute>
-        } />
-        <Route path="/help" element={<Help />} />
-        <Route path="/organizer" element={
-          <ProtectedRoute user={user}>
-            <Organizer />
-          </ProtectedRoute>
-        } />
-      </Route>
-    </Routes>
+          } />
+          <Route path="/tournaments/:id" element={<TournamentDetail />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/teams/create" element={
+            <ProtectedRoute user={user}>
+              <CreateTeam />
+            </ProtectedRoute>
+          } />
+          <Route path="/teams/:id" element={<TeamDetail />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/profile/:id?" element={<Profile />} />
+          <Route path="/notifications" element={
+            <ProtectedRoute user={user}>
+              <Notifications />
+            </ProtectedRoute>
+          } />
+          <Route path="/help" element={<Help />} />
+          <Route path="/organizer" element={
+            <ProtectedRoute user={user}>
+              <Organizer />
+            </ProtectedRoute>
+          } />
+          <Route path="/spectate/:matchId" element={<Spectate />} />
+        </Route>
+      </Routes>
+    </I18nProvider>
   );
 }

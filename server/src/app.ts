@@ -8,6 +8,7 @@ import userRoutes from "./routes/users.js";
 import notificationRoutes from "./routes/notifications.js";
 import disputeRoutes from "./routes/disputes.js";
 import passwordRoutes from "./routes/password.js";
+import reportRoutes from "./routes/reports.js";
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/disputes", disputeRoutes);
 app.use("/api/password", passwordRoutes);
+app.use("/api/reports", reportRoutes);
 
 export default app;

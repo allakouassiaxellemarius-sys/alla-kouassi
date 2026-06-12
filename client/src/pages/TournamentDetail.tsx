@@ -11,12 +11,39 @@ import WinnerSection from "../components/WinnerSection";
 import ScoreReportForm from "../components/ScoreReportForm";
 import DisputeForm from "../components/DisputeForm";
 import ContactOrganizerButton from "../components/ContactOrganizerButton";
+import ReportButton from "../components/ReportButton";
 import StatusBadge from "../components/StatusBadge";
 
 function getStatusLabel(status: string) {
   if (status === "ongoing") return "En cours";
   if (status === "completed") return "Terminé";
   return "Programmé";
+}
+
+function exportTournamentCSV(tournament: any, teams: any[], matches: any[]) {
+  const csvRows: string[] = [];
+  csvRows.push("Équipes inscrites");
+  csvRows.push("Nom,Tag,Membres");
+  teams.forEach((tt: any) => {
+    const members = (tt.team.members || []).map((m: any) => m.user?.username || "").join("; ");
+    csvRows.push(`${tt.team.name},[${tt.team.tag}],${members}`);
+  });
+  csvRows.push("");
+  csvRows.push("Matchs");
+  csvRows.push("Round,Match,Équipe 1,Score,Équipe 2,Vainqueur");
+  matches.forEach((m: any) => {
+    const t1 = teams.find((t: any) => t.teamId === m.team1Id)?.team?.name || "TBD";
+    const t2 = teams.find((t: any) => t.teamId === m.team2Id)?.team?.name || "TBD";
+    const winner = m.winnerId ? teams.find((t: any) => t.teamId === m.winnerId)?.team?.name || "—" : "—";
+    csvRows.push(`${m.round},#${m.matchIndex + 1},${t1},${m.score1 ?? "?"}-${m.score2 ?? "?"},${t2},${winner}`);
+  });
+  const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${tournament.name.replace(/[^a-zA-Z0-9]/g, "_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function TournamentDetail() {
@@ -362,6 +389,7 @@ export default function TournamentDetail() {
                                   matchId={m.id}
                                   onSent={refreshTournament}
                                 />
+                                <ReportButton targetId={m.id} targetType="match" />
                               </div>
                             )}
                             {m.status === "completed" && isUserMatch && (
@@ -375,6 +403,16 @@ export default function TournamentDetail() {
                                   matchId={m.id}
                                   onSent={refreshTournament}
                                 />
+                                <ReportButton targetId={m.id} targetType="match" />
+                              </div>
+                            )}
+                            {(m.status === "ongoing" || m.status === "completed") && (
+                              <div className="mt-2 pt-2 border-t border-gray-800 flex flex-wrap gap-2">
+                                <Link to={`/spectate/${m.id}`}
+                                  className="text-xs px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                  Mode spectateur
+                                </Link>
                               </div>
                             )}
                             {isOrganizer && m.status !== "completed" && (
@@ -404,13 +442,29 @@ export default function TournamentDetail() {
           <Leaderboard teams={teams} matches={matches} />
 
           <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
-              Détails du tournoi
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+                Détails du tournoi
+              </h3>
+              <button onClick={() => exportTournamentCSV(tournament, teams, matches)}
+                className="text-[10px] px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 transition flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Export CSV
+              </button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-              <div><span className="text-gray-500">Format</span><p className="text-gray-200 font-medium">{tournament.format === "single_elimination" ? "Élimination directe" : tournament.format}</p><p className="text-[10px] text-gray-600 mt-0.5">Les matchs nuls ne sont pas autorisés (prolongations + tirs au but)</p></div>
+              <div><span className="text-gray-500">Format</span><p className="text-gray-200 font-medium">{tournament.format === "single_elimination" ? "Élimination directe" : tournament.format === "double_elimination" ? "Double élimination" : "Poule"}</p></div>
               <div><span className="text-gray-500">Équipes min</span><p className="text-gray-200 font-medium">{tournament.minTeams}</p></div>
               <div><span className="text-gray-500">Équipes max</span><p className="text-gray-200 font-medium">{tournament.maxTeams}</p></div>
+              {tournament.level && tournament.level !== "all" && (
+                <div><span className="text-gray-500">Niveau</span><p className="text-purple-400 font-medium capitalize">{tournament.level}</p></div>
+              )}
+              {tournament.region && (
+                <div><span className="text-gray-500">Région</span><p className="text-gray-200 font-medium">{tournament.region}</p></div>
+              )}
+              {tournament.matchDuration && (
+                <div><span className="text-gray-500">Durée</span><p className="text-gray-200 font-medium">{tournament.matchDuration} min</p></div>
+              )}
               {tournament.startDate && (
                 <div><span className="text-gray-500">Début</span><p className="text-gray-200 font-medium">{new Date(tournament.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p></div>
               )}
@@ -418,6 +472,10 @@ export default function TournamentDetail() {
                 <div><span className="text-gray-500">Fin</span><p className="text-gray-200 font-medium">{new Date(tournament.endDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p></div>
               )}
               <div><span className="text-gray-500">Participants</span><p className="text-gray-200 font-medium">{teamsCount} équipe{teamsCount > 1 ? "s" : ""}</p></div>
+              <div><span className="text-gray-500">Points</span><p className="text-gray-200 font-medium">V:{tournament.pointsForWin} N:{tournament.pointsForDraw} D:{tournament.pointsForLoss}</p></div>
+              {tournament.registrationType && (
+                <div><span className="text-gray-500">Inscriptions</span><p className={`font-medium ${tournament.registrationType === "manual" ? "text-yellow-400" : "text-green-400"}`}>{tournament.registrationType === "manual" ? "Manuelle" : "Automatique"}</p></div>
+              )}
               {tournament.startDate && tournament.status === "upcoming" && (
                 <div><span className="text-gray-500">Inscriptions jusqu'au</span><p className="text-yellow-400 font-medium">{new Date(tournament.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p></div>
               )}
@@ -519,6 +577,39 @@ export default function TournamentDetail() {
               )}
             </div>
           </div>
+
+          {tournament.registrationType === "manual" && isOrganizer && (
+            <div className="bg-yellow-900/10 border border-yellow-800/30 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-yellow-500 rounded-full inline-block" />
+                Inscriptions en attente
+              </h3>
+              {teams.filter((tt: any) => tt.approvalStatus === "pending").length === 0 ? (
+                <p className="text-gray-500 text-sm">Aucune inscription en attente.</p>
+              ) : (
+                <div className="space-y-2">
+                  {teams.filter((tt: any) => tt.approvalStatus === "pending").map((tt: any) => (
+                    <div key={tt.id} className="flex items-center justify-between bg-gray-950/60 rounded-lg p-3">
+                      <div>
+                        <div className="text-sm font-medium">{tt.team.name}</div>
+                        <div className="text-[10px] text-gray-500">[{tt.team.tag}]</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={async () => {
+                          try { await api.tournaments.approveTeam(tournament.id, tt.teamId); refreshTournament(); }
+                          catch (err: any) { alert(err.message); }
+                        }} className="text-xs px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white rounded-lg transition">Approuver</button>
+                        <button onClick={async () => {
+                          try { await api.tournaments.rejectTeam(tournament.id, tt.teamId); refreshTournament(); }
+                          catch (err: any) { alert(err.message); }
+                        }} className="text-xs px-3 py-1.5 bg-red-900/50 hover:bg-red-800 text-red-400 rounded-lg transition">Refuser</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {tournament.rules && (
             <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-5">

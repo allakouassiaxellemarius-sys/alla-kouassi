@@ -8,10 +8,25 @@ function pid(p: string | string[] | undefined): string {
   return Array.isArray(p) ? p[0] : p || "";
 }
 
-router.get("/", async (_req, res: Response) => {
+router.get("/", async (req: AuthRequest, res: Response) => {
   try {
+    const { search, game, level, region, status, format, sort } = req.query;
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: pid(search as string), mode: "insensitive" } },
+        { description: { contains: pid(search as string), mode: "insensitive" } },
+      ];
+    }
+    if (game) where.game = { equals: pid(game as string), mode: "insensitive" };
+    if (level && level !== "all") where.level = pid(level as string);
+    if (region) where.region = { equals: pid(region as string), mode: "insensitive" };
+    if (status) where.status = pid(status as string);
+    if (format) where.format = pid(format as string);
+    const orderBy: any = sort === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
     const tournaments = await prisma.tournament.findMany({
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy,
     });
     const result = await Promise.all(
       tournaments.map(async (t) => {
@@ -66,7 +81,7 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
 
 router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, description, game, maxTeams, minTeams, prizePool, startDate, format, rules } = req.body;
+    const { name, description, game, maxTeams, minTeams, prizePool, startDate, format, rules, level, region, matchDuration, pointsForWin, pointsForDraw, pointsForLoss, allowDraw, registrationType } = req.body;
     if (!name) {
       res.status(400).json({ error: "Le nom du tournoi est requis" });
       return;
@@ -81,6 +96,14 @@ router.post("/", authMiddleware, async (req: AuthRequest, res: Response) => {
         prizePool,
         startDate: startDate ? new Date(startDate) : null,
         format: format || "single_elimination",
+        level: level || "all",
+        region,
+        matchDuration: matchDuration ? parseInt(matchDuration) : null,
+        pointsForWin: parseInt(pointsForWin) || 3,
+        pointsForDraw: parseInt(pointsForDraw) || 1,
+        pointsForLoss: parseInt(pointsForLoss) || 0,
+        allowDraw: allowDraw === true || allowDraw === "true",
+        registrationType: registrationType || "auto",
         rules,
         organizers: { create: { userId: req.userId! } },
       },
@@ -144,8 +167,9 @@ router.post("/:id/register", authMiddleware, async (req: AuthRequest, res: Respo
       res.status(403).json({ error: "Un membre de cette équipe est organisateur du tournoi" });
       return;
     }
+    const approvalStatus = tournament.registrationType === "manual" ? "pending" : "approved";
     const registration = await prisma.tournamentTeam.create({
-      data: { teamId, tournamentId: id },
+      data: { teamId, tournamentId: id, approvalStatus },
       include: { team: true },
     });
     const orgs = await prisma.tournamentOrganizer.findMany({ where: { tournamentId: id } });
@@ -155,11 +179,17 @@ router.post("/:id/register", authMiddleware, async (req: AuthRequest, res: Respo
           userId: org.userId,
           type: "registration",
           title: "Nouvelle inscription",
-          message: `${registration.team.name} s'est inscrit au tournoi ${tournament.name}`,
+          message: tournament.registrationType === "manual"
+            ? `${registration.team.name} souhaite s'inscrire au tournoi ${tournament.name} - en attente d'approbation`
+            : `${registration.team.name} s'est inscrit au tournoi ${tournament.name}`,
           link: `/tournaments/${id}`,
           tournamentId: id,
         },
       });
+    }
+    if (approvalStatus === "pending") {
+      res.status(201).json(registration);
+      return;
     }
     const newCount = teamsCount + 1;
     if (newCount >= tournament.maxTeams && tournament.status === "upcoming") {
@@ -259,6 +289,102 @@ router.post("/:id/unregister", authMiddleware, async (req: AuthRequest, res: Res
     }
     await prisma.tournamentTeam.delete({ where: { id: registration.id } });
     res.json({ message: "Désinscription réussie" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/:id/approve-team", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const { teamId } = req.body;
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: req.userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut approuver les inscriptions" });
+      return;
+    }
+    const tt = await prisma.tournamentTeam.findFirst({
+      where: { teamId, tournamentId: id },
+      include: { team: true },
+    });
+    if (!tt) {
+      res.status(404).json({ error: "Inscription non trouvée" });
+      return;
+    }
+    await prisma.tournamentTeam.update({ where: { id: tt.id }, data: { approvalStatus: "approved" } });
+    const members = await prisma.teamMember.findMany({ where: { teamId }, select: { userId: true } });
+    for (const m of members) {
+      await prisma.notification.create({
+        data: {
+          userId: m.userId,
+          type: "info",
+          title: "Inscription approuvée",
+          message: `${tt.team.name} a été approuvé pour le tournoi`,
+          link: `/tournaments/${id}`,
+          tournamentId: id,
+        },
+      });
+    }
+    res.json({ message: "Équipe approuvée" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/:id/reject-team", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const { teamId } = req.body;
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: req.userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut refuser les inscriptions" });
+      return;
+    }
+    const tt = await prisma.tournamentTeam.findFirst({
+      where: { teamId, tournamentId: id },
+      include: { team: true },
+    });
+    if (!tt) {
+      res.status(404).json({ error: "Inscription non trouvée" });
+      return;
+    }
+    await prisma.tournamentTeam.delete({ where: { id: tt.id } });
+    const members = await prisma.teamMember.findMany({ where: { teamId }, select: { userId: true } });
+    for (const m of members) {
+      await prisma.notification.create({
+        data: {
+          userId: m.userId,
+          type: "info",
+          title: "Inscription refusée",
+          message: `${tt.team.name} n'a pas été retenu pour le tournoi`,
+          link: `/tournaments/${id}`,
+          tournamentId: id,
+        },
+      });
+    }
+    res.json({ message: "Inscription refusée" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/:id/spectate", async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const match = await prisma.match.findUnique({ where: { id } });
+    if (!match) {
+      res.status(404).json({ error: "Match non trouvé" });
+      return;
+    }
+    await prisma.match.update({ where: { id }, data: { spectatorCount: { increment: 1 } } });
+    res.json({ spectatorCount: (match.spectatorCount || 0) + 1 });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });

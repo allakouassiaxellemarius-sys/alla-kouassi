@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import NotificationBell from "../NotificationBell";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 interface NavbarProps {
   user: { username: string } | null;
@@ -36,6 +37,7 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {user ? (
               <>
                 <Link to="/dashboard" className="text-gray-300 hover:text-white transition">
