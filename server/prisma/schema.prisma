@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  avatar    String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams        TeamMember[]
+  tournaments  TournamentOrganizer[]
+  matches      MatchPlayer[]
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  tag         String
+  logo        String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members   TeamMember[]
+  tournaments TournamentTeam[]
+}
+
+model TeamMember {
+  id      String @id @default(uuid())
+  userId  String
+  teamId  String
+  role    String @default("member")
+  user    User   @relation(fields: [userId], references: [id])
+  team    Team   @relation(fields: [teamId], references: [id])
+}
+
+model Tournament {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  game        String?
+  maxTeams    Int      @default(16)
+  minTeams    Int      @default(2)
+  prizePool   String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String   @default("upcoming")
+  format      String   @default("single_elimination")
+  rules       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizers  TournamentOrganizer[]
+  teams       TournamentTeam[]
+  matches     Match[]
+}
+
+model TournamentOrganizer {
+  id            String     @id @default(uuid())
+  userId        String
+  tournamentId  String
+  user          User       @relation(fields: [userId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model TournamentTeam {
+  id            String     @id @default(uuid())
+  teamId        String
+  tournamentId  String
+  seed          Int?
+  status        String     @default("registered")
+  team          Team       @relation(fields: [teamId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+}
+
+model Match {
+  id            String   @id @default(uuid())
+  tournamentId  String
+  round         Int
+  matchIndex    Int
+  team1Id       String?
+  team2Id       String?
+  winnerId      String?
+  score1        Int?
+  score2        Int?
+  status        String   @default("scheduled")
+  scheduledAt   DateTime?
+  playedAt      DateTime?
+  createdAt     DateTime @default(now())
+
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  players       MatchPlayer[]
+}
+
+model MatchPlayer {
+  id      String @id @default(uuid())
+  matchId String
+  userId  String
+  teamId  String?
+  match   Match  @relation(fields: [matchId], references: [id])
+  user    User   @relation(fields: [userId], references: [id])
+}
