@@ -21,12 +21,12 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   auth: {
-    register: (data: { email: string; username: string; password: string }) =>
+    register: (data: { email: string; username: string; password: string; deviceId?: string }) =>
       request<{ user: import("../types").User; token: string }>("/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    login: (data: { email: string; password: string }) =>
+    login: (data: { email: string; password: string; deviceId?: string }) =>
       request<{ user: import("../types").User; token: string }>("/auth/login", {
         method: "POST",
         body: JSON.stringify(data),

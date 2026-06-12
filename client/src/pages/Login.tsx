@@ -13,10 +13,16 @@ export default function Login({ onLogin }: LoginProps) {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  function getDeviceId(): string {
+    let id = localStorage.getItem("deviceId");
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem("deviceId", id); }
+    return id;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { user, token } = await api.auth.login({ email, password });
+      const { user, token } = await api.auth.login({ email, password, deviceId: getDeviceId() });
       localStorage.setItem("token", token);
       onLogin(user);
       navigate("/dashboard");

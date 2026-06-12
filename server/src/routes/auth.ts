@@ -7,7 +7,7 @@ const router = Router();
 
 router.post("/register", async (req: AuthRequest, res: Response) => {
   try {
-    const { email, username, password } = req.body;
+    const { email, username, password, deviceId } = req.body;
     if (!email || !username || !password) {
       res.status(400).json({ error: "Email, nom d'utilisateur et mot de passe requis" });
       return;
@@ -15,6 +15,13 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
     if (password.length < 6) {
       res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères" });
       return;
+    }
+    if (deviceId) {
+      const existingDevice = await prisma.user.findFirst({ where: { deviceId } });
+      if (existingDevice) {
+        res.status(409).json({ error: "Un compte existe déjà sur cet appareil" });
+        return;
+      }
     }
     const existing = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
@@ -25,7 +32,7 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, username, password: hashedPassword },
+      data: { email, username, password: hashedPassword, deviceId: deviceId || null },
       select: { id: true, email: true, username: true, role: true },
     });
     const token = generateToken(user.id, user.role);
@@ -38,7 +45,7 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
 
 router.post("/login", async (req: AuthRequest, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId } = req.body;
     if (!email || !password) {
       res.status(400).json({ error: "Email et mot de passe requis" });
       return;
@@ -52,6 +59,16 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
     if (!valid) {
       res.status(401).json({ error: "Email ou mot de passe incorrect" });
       return;
+    }
+    if (deviceId) {
+      const otherUser = await prisma.user.findFirst({ where: { deviceId, id: { not: user.id } } });
+      if (otherUser) {
+        if (otherUser.id !== user.id) {
+          res.status(409).json({ error: "Cet appareil est lié à un autre compte" });
+          return;
+        }
+      }
+      await prisma.user.update({ where: { id: user.id }, data: { deviceId } });
     }
     const token = generateToken(user.id, user.role);
     res.json({
