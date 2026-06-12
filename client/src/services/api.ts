@@ -50,6 +50,11 @@ export const api = {
       request<{ message: string; matches: number }>(`/tournaments/${tournamentId}/generate-brackets`, {
         method: "POST",
       }),
+    unregister: (tournamentId: string, teamId: string) =>
+      request<{ message: string }>(`/tournaments/${tournamentId}/unregister`, {
+        method: "POST",
+        body: JSON.stringify({ teamId }),
+      }),
   },
   teams: {
     list: () => request<import("../types").Team[]>("/teams"),

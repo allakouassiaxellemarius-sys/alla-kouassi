@@ -182,6 +182,36 @@ router.post("/:id/start", authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
+router.post("/:id/unregister", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const { teamId } = req.body;
+    if (!teamId) {
+      res.status(400).json({ error: "ID de l'équipe requis" });
+      return;
+    }
+    const member = await prisma.teamMember.findFirst({
+      where: { userId: req.userId, teamId },
+    });
+    if (!member) {
+      res.status(403).json({ error: "Vous n'êtes pas membre de cette équipe" });
+      return;
+    }
+    const registration = await prisma.tournamentTeam.findFirst({
+      where: { teamId, tournamentId: id },
+    });
+    if (!registration) {
+      res.status(404).json({ error: "Inscription non trouvée" });
+      return;
+    }
+    await prisma.tournamentTeam.delete({ where: { id: registration.id } });
+    res.json({ message: "Désinscription réussie" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 router.post("/:id/generate-brackets", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = pid(req.params.id);
