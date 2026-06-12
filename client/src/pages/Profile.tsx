@@ -1,54 +1,180 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { api } from "../services/api";
 
 export default function Profile() {
   const { id } = useParams();
   const [profile, setProfile] = useState<any>(null);
+  const [tournaments, setTournaments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const userId = id || "me";
-    api.users
-      .get(userId)
-      .then(setProfile)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    setLoading(true);
+    Promise.all([
+      api.users.get(userId).catch(() => null),
+      api.tournaments.list().catch(() => []),
+    ]).then(([user, allTournaments]) => {
+      setProfile(user);
+      if (user) {
+        const userTeamIds = (user.teams || []).map((t: any) => t.teamId);
+        const involved = allTournaments.filter((t: any) =>
+          (t.teams || []).some((tt: any) => userTeamIds.includes(tt.teamId))
+        );
+        Promise.all(
+          involved.map((t: any) => api.tournaments.get(t.id).catch(() => null))
+        ).then((full) => {
+          setTournaments(full.filter(Boolean));
+        });
+      }
+      setLoading(false);
+    });
   }, [id]);
 
   if (loading) return <div className="text-center py-16 text-gray-400">Chargement...</div>;
   if (!profile) return <div className="text-center py-16 text-gray-400">Utilisateur non trouvé</div>;
 
+  const totalMatches = tournaments.reduce((s, t) => s + (t.matches?.length || 0), 0);
+  const totalWins = tournaments.reduce((s: number, t: any) => {
+    const userTeamIds = (profile.teams || []).map((tm: any) => tm.teamId);
+    return s + (t.matches || []).filter((m: any) => userTeamIds.includes(m.winnerId)).length;
+  }, 0);
+  const totalTournaments = tournaments.length;
+  const totalTeams = profile.teams?.length || 0;
+  const badges = profile.badges || [];
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 mb-8">
-        <div className="flex items-center gap-6">
-          <div className="w-20 h-20 rounded-full bg-purple-700 flex items-center justify-center text-3xl font-bold">
-            {profile.username[0].toUpperCase()}
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">{profile.username}</h1>
-            <p className="text-gray-400">{profile.teams?.length || 0} équipes</p>
-          </div>
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-2xl font-bold text-white shrink-0">
+          {profile.username[0].toUpperCase()}
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">{profile.username}</h1>
+          {!id && <p className="text-sm text-gray-500">{profile.email}</p>}
+          <p className="text-xs text-gray-600 mt-0.5">
+            {totalTeams} équipe{totalTeams > 1 ? "s" : ""} · {totalTournaments} tournoi{totalTournaments > 1 ? "x" : ""}
+          </p>
         </div>
       </div>
 
-      {profile.teams && profile.teams.length > 0 && (
-        <>
-          <h2 className="text-xl font-bold mb-4">Équipes</h2>
-          <div className="space-y-3">
-            {profile.teams.map((tm: any) => (
-              <div
-                key={tm.id}
-                className="bg-gray-900 border border-gray-800 rounded-lg p-4"
-              >
-                <div className="font-medium">{tm.team.name}</div>
-                <div className="text-sm text-gray-500">[{tm.team.tag}]</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-purple-400">{totalTournaments}</div>
+          <div className="text-xs text-gray-500 mt-1">Tournois</div>
+        </div>
+        <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-green-400">{totalWins}</div>
+          <div className="text-xs text-gray-500 mt-1">Victoires</div>
+        </div>
+        <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-blue-400">{totalMatches}</div>
+          <div className="text-xs text-gray-500 mt-1">Matchs</div>
+        </div>
+        <div className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-yellow-400">{totalTeams}</div>
+          <div className="text-xs text-gray-500 mt-1">Équipes</div>
+        </div>
+      </div>
+
+      {badges.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <span>🏅</span>
+            Badges et récompenses
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {badges.map((b: any) => (
+              <div key={b.id} className="flex items-center gap-2 bg-gray-900/60 border border-gray-800 rounded-lg px-3 py-2">
+                <span className="text-lg">{b.icon}</span>
+                <div>
+                  <div className="text-xs font-medium">{b.name}</div>
+                  <div className="text-[10px] text-gray-500">{b.description}</div>
+                </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
+
+      <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Équipes
+          </h2>
+          {profile.teams?.length > 0 ? (
+            <div className="space-y-2">
+              {profile.teams.map((tm: any) => (
+                <Link
+                  key={tm.id}
+                  to={`/teams/${tm.teamId}`}
+                  className="block bg-gray-900/60 border border-gray-800 rounded-lg p-3 hover:border-purple-700/50 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">{tm.team.name}</div>
+                      <div className="text-xs text-gray-500">[{tm.team.tag}]</div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                      tm.role === "captain" ? "bg-yellow-900/30 text-yellow-400" : "bg-gray-800 text-gray-500"
+                    }`}>
+                      {tm.role === "captain" ? "Capitaine" : "Membre"}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Aucune équipe</p>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            Historique des tournois
+          </h2>
+          {tournaments.length > 0 ? (
+            <div className="space-y-2">
+              {tournaments.map((t: any) => {
+                const userTeamIds = (profile.teams || []).map((tm: any) => tm.teamId);
+                const myTeam = (t.teams || []).find((tt: any) => userTeamIds.includes(tt.teamId));
+                const myMatches = (t.matches || []).filter(
+                  (m: any) => myTeam && (m.team1Id === myTeam.teamId || m.team2Id === myTeam.teamId)
+                );
+                const myWins = myMatches.filter((m: any) => m.winnerId === myTeam?.teamId).length;
+                return (
+                  <Link
+                    key={t.id}
+                    to={`/tournaments/${t.id}`}
+                    className="block bg-gray-900/60 border border-gray-800 rounded-lg p-3 hover:border-purple-700/50 transition"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium truncate">{t.name}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${
+                        t.status === "completed" ? "bg-green-900/30 text-green-400" :
+                        t.status === "ongoing" ? "bg-yellow-900/30 text-yellow-400" :
+                        "bg-blue-900/30 text-blue-400"
+                      }`}>
+                        {t.status === "completed" ? "Terminé" : t.status === "ongoing" ? "En cours" : "À venir"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      {myTeam && <span>Avec {myTeam.team.name}</span>}
+                      {myMatches.length > 0 && <span>{myMatches.length} matchs</span>}
+                      {myWins > 0 && <span className="text-green-400">{myWins}V</span>}
+                      {t.game && <span>{t.game}</span>}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Aucun tournoi pour le moment</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

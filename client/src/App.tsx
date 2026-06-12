@@ -14,6 +14,11 @@ import TeamDetail from "./pages/TeamDetail";
 import CreateTeam from "./pages/CreateTeam";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
+import Help from "./pages/Help";
+import Organizer from "./pages/Organizer";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { api } from "./services/api";
 
 export default function App() {
@@ -47,6 +52,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login onLogin={setUser} />} />
         <Route path="/register" element={<Register onLogin={setUser} />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/dashboard"
           element={
@@ -71,6 +78,17 @@ export default function App() {
         <Route path="/teams/:id" element={<TeamDetail />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/profile/:id?" element={<Profile />} />
+        <Route path="/notifications" element={
+          <ProtectedRoute user={user}>
+            <Notifications />
+          </ProtectedRoute>
+        } />
+        <Route path="/help" element={<Help />} />
+        <Route path="/organizer" element={
+          <ProtectedRoute user={user}>
+            <Organizer />
+          </ProtectedRoute>
+        } />
       </Route>
     </Routes>
   );

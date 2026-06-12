@@ -7,6 +7,8 @@ interface LeaderboardUser {
   username: string;
   avatar?: string;
   tournamentsPlayed: number;
+  badges: number;
+  tournamentWins: number;
 }
 
 export default function Leaderboard() {
@@ -29,8 +31,10 @@ export default function Leaderboard() {
       <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
         <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-800/50 text-sm text-gray-400 font-medium">
           <div className="col-span-1">#</div>
-          <div className="col-span-8">Joueur</div>
-          <div className="col-span-3 text-right">Tournois joués</div>
+          <div className="col-span-5">Joueur</div>
+          <div className="col-span-2 text-center">🏆</div>
+          <div className="col-span-2 text-center">🏅</div>
+          <div className="col-span-2 text-right">Matchs</div>
         </div>
         <div className="divide-y divide-gray-800">
           {users.map((u, i) => (
@@ -50,13 +54,19 @@ export default function Leaderboard() {
                   <span className="text-gray-600">{i + 1}</span>
                 )}
               </div>
-              <div className="col-span-8 flex items-center gap-3">
+              <div className="col-span-5 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-sm font-bold">
                   {u.username[0].toUpperCase()}
                 </div>
                 <span className="font-medium">{u.username}</span>
               </div>
-              <div className="col-span-3 text-right font-mono text-purple-400">
+              <div className="col-span-2 text-center font-mono text-yellow-400">
+                {u.tournamentWins || 0}
+              </div>
+              <div className="col-span-2 text-center font-mono text-purple-400">
+                {u.badges || 0}
+              </div>
+              <div className="col-span-2 text-right font-mono text-gray-400">
                 {u.tournamentsPlayed}
               </div>
             </Link>

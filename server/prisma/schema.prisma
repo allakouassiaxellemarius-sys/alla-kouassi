@@ -21,6 +21,9 @@ model User {
   teams        TeamMember[]
   tournaments  TournamentOrganizer[]
   matches      MatchPlayer[]
+  notifications Notification[]
+  disputes     Dispute[]
+  badges       Badge[]
 }
 
 model Team {
@@ -61,15 +64,17 @@ model Tournament {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  organizers  TournamentOrganizer[]
-  teams       TournamentTeam[]
-  matches     Match[]
+  organizers    TournamentOrganizer[]
+  teams         TournamentTeam[]
+  matches       Match[]
+  disputes      Dispute[]
+  notifications Notification[]
 }
 
 model TournamentOrganizer {
   id            String     @id @default(uuid())
   userId        String
-  tournamentId  String
+  tournamentId  String      @unique
   user          User       @relation(fields: [userId], references: [id])
   tournament    Tournament @relation(fields: [tournamentId], references: [id])
 }
@@ -85,22 +90,45 @@ model TournamentTeam {
 }
 
 model Match {
-  id            String   @id @default(uuid())
-  tournamentId  String
-  round         Int
-  matchIndex    Int
-  team1Id       String?
-  team2Id       String?
-  winnerId      String?
-  score1        Int?
-  score2        Int?
-  status        String   @default("scheduled")
-  scheduledAt   DateTime?
-  playedAt      DateTime?
-  createdAt     DateTime @default(now())
+  id              String   @id @default(uuid())
+  tournamentId    String
+  round           Int
+  matchIndex      Int
+  team1Id         String?
+  team2Id         String?
+  winnerId        String?
+  score1          Int?
+  score2          Int?
+  scoreStatus     String   @default("pending")
+  status          String   @default("scheduled")
+  scheduledAt     DateTime?
+  playedAt        DateTime?
+  delayed         Boolean  @default(false)
+  delayReason     String?
+  delayReportedBy String?
+  scoreReportedBy String?
+  scoreApprovedBy String?
+  log             String   @default("[]")
+  createdAt       DateTime @default(now())
 
-  tournament    Tournament @relation(fields: [tournamentId], references: [id])
-  players       MatchPlayer[]
+  tournament      Tournament @relation(fields: [tournamentId], references: [id])
+  players         MatchPlayer[]
+  disputes        Dispute[]
+  badges          Badge[]
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  userId      String
+  matchId     String?
+  type        String
+  name        String
+  description String
+  icon        String   @default("🏆")
+  earnedAt    DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  match       Match?   @relation(fields: [matchId], references: [id])
 }
 
 model MatchPlayer {
@@ -110,4 +138,45 @@ model MatchPlayer {
   teamId  String?
   match   Match  @relation(fields: [matchId], references: [id])
   user    User   @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String   @default("info")
+  title        String
+  message      String
+  link         String?
+  tournamentId String?
+  read         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  tournament Tournament? @relation(fields: [tournamentId], references: [id])
+}
+
+model ResetToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Dispute {
+  id          String   @id @default(uuid())
+  matchId     String
+  tournamentId String
+  reportedBy  String
+  reason      String
+  details     String?
+  status      String   @default("open")
+  resolvedBy  String?
+  resolution  String?
+  createdAt   DateTime @default(now())
+
+  match      Match      @relation(fields: [matchId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  reporter   User       @relation(fields: [reportedBy], references: [id])
 }

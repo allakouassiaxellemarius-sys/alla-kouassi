@@ -46,13 +46,24 @@ export default function CreateTournament() {
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1">Jeu</label>
-          <input
-            type="text"
-            value={form.game}
-            onChange={(e) => setForm({ ...form, game: e.target.value })}
-            className="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:border-purple-500"
-            placeholder="Ex: League of Legends, Valorant, CS2..."
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={form.game}
+              onChange={(e) => setForm({ ...form, game: e.target.value })}
+              className="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 focus:outline-none focus:border-purple-500"
+              placeholder="Ex: League of Legends, Valorant, CS2..."
+              list="game-suggestions"
+            />
+            <datalist id="game-suggestions">
+              <option value="eFootball" />
+              <option value="League of Legends" />
+              <option value="Valorant" />
+              <option value="CS2" />
+              <option value="Fortnite" />
+              <option value="Rocket League" />
+            </datalist>
+          </div>
         </div>
         <div>
           <label className="block text-sm text-gray-400 mb-1">Description</label>

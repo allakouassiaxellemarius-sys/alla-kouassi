@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import prisma from "../prisma/client.js";
+import { authMiddleware, AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -28,10 +29,12 @@ router.get("/leaderboard", async (_req, res: Response) => {
           (sum, tm) => sum + tm.team.tournaments.length,
           0
         );
-        return { id: u.id, username: u.username, avatar: u.avatar, tournamentsPlayed };
+        const badges = await prisma.badge.count({ where: { userId: u.id } });
+        const tournamentWins = await prisma.badge.count({ where: { userId: u.id, type: "tournament_winner" } });
+        return { id: u.id, username: u.username, avatar: u.avatar, tournamentsPlayed, badges, tournamentWins };
       })
     );
-    leaderboard.sort((a, b) => b.tournamentsPlayed - a.tournamentsPlayed);
+    leaderboard.sort((a, b) => b.tournamentWins - a.tournamentWins || b.tournamentsPlayed - a.tournamentsPlayed);
     res.json(leaderboard.slice(0, 50));
   } catch (err) {
     console.error(err);
@@ -56,7 +59,8 @@ router.get("/:id", async (req, res: Response) => {
         team: { select: { id: true, name: true, tag: true, logo: true } },
       },
     });
-    res.json({ ...user, teams });
+    const badges = await prisma.badge.findMany({ where: { userId: id }, orderBy: { earnedAt: "desc" } });
+    res.json({ ...user, teams, badges });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });

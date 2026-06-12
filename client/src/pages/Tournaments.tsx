@@ -20,12 +20,6 @@ export default function Tournaments() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Tournois</h1>
-        <Link
-          to="/tournaments/create"
-          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition"
-        >
-          Créer un tournoi
-        </Link>
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tournaments.map((t) => (

@@ -121,10 +121,63 @@ router.post("/:id/register", authMiddleware, async (req: AuthRequest, res: Respo
       res.status(409).json({ error: "Équipe déjà inscrite" });
       return;
     }
+    const memberCount = await prisma.teamMember.count({ where: { teamId } });
+    if (memberCount < 1) {
+      res.status(400).json({ error: "L'équipe doit avoir au moins 1 membre" });
+      return;
+    }
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: req.userId },
+    });
+    if (isOrganizer) {
+      res.status(403).json({ error: "Un organisateur ne peut pas participer à son propre tournoi" });
+      return;
+    }
+    const teamMemberIds = (await prisma.teamMember.findMany({
+      where: { teamId },
+      select: { userId: true },
+    })).map(m => m.userId);
+    const orgConflict = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: { in: teamMemberIds } },
+    });
+    if (orgConflict) {
+      res.status(403).json({ error: "Un membre de cette équipe est organisateur du tournoi" });
+      return;
+    }
     const registration = await prisma.tournamentTeam.create({
       data: { teamId, tournamentId: id },
       include: { team: true },
     });
+    const orgs = await prisma.tournamentOrganizer.findMany({ where: { tournamentId: id } });
+    for (const org of orgs) {
+      await prisma.notification.create({
+        data: {
+          userId: org.userId,
+          type: "registration",
+          title: "Nouvelle inscription",
+          message: `${registration.team.name} s'est inscrit au tournoi ${tournament.name}`,
+          link: `/tournaments/${id}`,
+          tournamentId: id,
+        },
+      });
+    }
+    const newCount = teamsCount + 1;
+    if (newCount >= tournament.maxTeams && tournament.status === "upcoming") {
+      const allTeams = await prisma.tournamentTeam.findMany({ where: { tournamentId: id } });
+      const shuffled = [...allTeams].sort(() => Math.random() - 0.5);
+      const matchData: any[] = [];
+      let mi = 0;
+      for (let j = 0; j < shuffled.length; j += 2) {
+        if (j + 1 < shuffled.length) {
+          matchData.push({ tournamentId: id, round: 1, matchIndex: mi++, team1Id: shuffled[j].teamId, team2Id: shuffled[j + 1].teamId, status: "scheduled" });
+        } else {
+          matchData.push({ tournamentId: id, round: 1, matchIndex: mi++, team1Id: shuffled[j].teamId, status: "scheduled" });
+        }
+      }
+      await prisma.match.createMany({ data: matchData });
+      await prisma.tournament.update({ where: { id }, data: { status: "ongoing" } });
+      await createMatchNotifications(id);
+    }
     res.status(201).json(registration);
   } catch (err) {
     console.error(err);
@@ -212,6 +265,87 @@ router.post("/:id/unregister", authMiddleware, async (req: AuthRequest, res: Res
   }
 });
 
+async function createMatchNotifications(tournamentId: string) {
+  const matches = await prisma.match.findMany({
+    where: { tournamentId },
+    include: {
+      tournament: { select: { name: true } },
+    },
+  });
+  for (const m of matches) {
+    const teamIds = [m.team1Id, m.team2Id].filter(Boolean) as string[];
+    for (const teamId of teamIds) {
+      const members = await prisma.teamMember.findMany({
+        where: { teamId },
+        select: { userId: true },
+      });
+      for (const member of members) {
+        const opponentId = teamId === m.team1Id ? m.team2Id : m.team1Id;
+        const opponent = opponentId
+          ? await prisma.team.findUnique({ where: { id: opponentId }, select: { name: true } })
+          : null;
+        await prisma.notification.create({
+          data: {
+            userId: member.userId,
+            type: "match",
+            title: "Match à venir",
+            message: `Match Round ${m.round} : ${opponent ? "vs " + opponent.name : "en attente d'adversaire"} dans ${m.tournament.name}`,
+            link: `/tournaments/${tournamentId}`,
+            tournamentId,
+          },
+        });
+      }
+    }
+  }
+}
+
+async function createBadgesForCompletedMatch(matchId: string) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    include: {
+      tournament: { select: { id: true, name: true } },
+    },
+  });
+  if (!match || !match.winnerId) return;
+  const winnerMembers = await prisma.teamMember.findMany({
+    where: { teamId: match.winnerId },
+    select: { userId: true },
+  });
+  for (const member of winnerMembers) {
+    const existing = await prisma.badge.count({
+      where: { userId: member.userId, type: "match_winner" },
+    });
+    await prisma.badge.create({
+      data: {
+        userId: member.userId,
+        matchId: match.id,
+        type: "match_winner",
+        name: "Victoire en match",
+        description: `A gagné le match #${match.matchIndex + 1} du tournoi ${match.tournament.name}`,
+        icon: "⚔️",
+      },
+    });
+  }
+  const nextRoundMatch = await prisma.match.findFirst({
+    where: { tournamentId: match.tournamentId, round: match.round + 1 },
+    orderBy: { matchIndex: "asc" },
+  });
+  if (!nextRoundMatch) {
+    for (const member of winnerMembers) {
+      await prisma.badge.create({
+        data: {
+          userId: member.userId,
+          matchId: match.id,
+          type: "tournament_winner",
+          name: "Champion du tournoi",
+          description: `A remporté le tournoi ${match.tournament.name}`,
+          icon: "🏆",
+        },
+      });
+    }
+  }
+}
+
 router.post("/:id/generate-brackets", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const id = pid(req.params.id);
@@ -266,8 +400,132 @@ router.post("/:id/generate-brackets", authMiddleware, async (req: AuthRequest, r
       }
     }
     await prisma.match.createMany({ data: round1Matches });
+    await prisma.tournament.update({ where: { id }, data: { status: "ongoing" } });
+    await createMatchNotifications(id);
     const matchesCount = await prisma.match.count({ where: { tournamentId: id } });
     res.json({ message: "Brackets générés", matches: matchesCount });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/:id/send-instructions", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const { subject, message } = req.body;
+    if (!subject || !message) {
+      res.status(400).json({ error: "subject et message requis" });
+      return;
+    }
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: req.userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut envoyer des consignes" });
+      return;
+    }
+    const tournament = await prisma.tournament.findUnique({ where: { id } });
+    const teams = await prisma.tournamentTeam.findMany({
+      where: { tournamentId: id },
+      include: { team: { include: { members: { select: { userId: true } } } } },
+    });
+    const userIds = new Set<string>();
+    for (const tt of teams) {
+      for (const m of tt.team.members) userIds.add(m.userId);
+    }
+    for (const uid of userIds) {
+      await prisma.notification.create({
+        data: {
+          userId: uid,
+          type: "instruction",
+          title: subject,
+          message,
+          link: `/tournaments/${id}`,
+          tournamentId: id,
+        },
+      });
+    }
+    res.json({ message: `Consigne envoyée à ${userIds.size} participant(s)` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/:id/close", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const id = pid(req.params.id);
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId: req.userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut clôturer le tournoi" });
+      return;
+    }
+    const tournament = await prisma.tournament.findUnique({ where: { id } });
+    if (tournament?.status === "completed") {
+      res.status(400).json({ error: "Tournoi déjà terminé" });
+      return;
+    }
+    await prisma.tournament.update({
+      where: { id },
+      data: { status: "completed", endDate: new Date() },
+    });
+    const teams = await prisma.tournamentTeam.findMany({
+      where: { tournamentId: id },
+      include: { team: { include: { members: { select: { userId: true } } } } },
+    });
+    const userIds = new Set<string>();
+    for (const tt of teams) {
+      for (const m of tt.team.members) userIds.add(m.userId);
+    }
+    for (const uid of userIds) {
+      await prisma.notification.create({
+        data: {
+          userId: uid,
+          type: "info",
+          title: "Tournoi clôturé",
+          message: `Le tournoi ${tournament?.name} a été clôturé par l'organisateur`,
+          link: `/tournaments/${id}`,
+          tournamentId: id,
+        },
+      });
+    }
+    res.json({ message: "Tournoi clôturé" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.delete("/:id", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const id = pid(req.params.id);
+    const isOrganizer = await prisma.tournamentOrganizer.findFirst({
+      where: { tournamentId: id, userId },
+    });
+    if (!isOrganizer) {
+      res.status(403).json({ error: "Seul un organisateur peut supprimer le tournoi" });
+      return;
+    }
+    const tournament = await prisma.tournament.findUnique({ where: { id } });
+    if (!tournament) {
+      res.status(404).json({ error: "Tournoi non trouvé" });
+      return;
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.badge.deleteMany({ where: { match: { tournamentId: id } } });
+      await tx.matchPlayer.deleteMany({ where: { match: { tournamentId: id } } });
+      await tx.dispute.deleteMany({ where: { tournamentId: id } });
+      await tx.notification.deleteMany({ where: { tournamentId: id } });
+      await tx.match.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentTeam.deleteMany({ where: { tournamentId: id } });
+      await tx.tournamentOrganizer.deleteMany({ where: { tournamentId: id } });
+      await tx.tournament.delete({ where: { id } });
+    });
+    res.json({ message: "Tournoi supprimé" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });

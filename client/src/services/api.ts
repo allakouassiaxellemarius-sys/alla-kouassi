@@ -55,6 +55,15 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ teamId }),
       }),
+    sendInstructions: (tournamentId: string, subject: string, message: string) =>
+      request<{ message: string }>(`/tournaments/${tournamentId}/send-instructions`, {
+        method: "POST",
+        body: JSON.stringify({ subject, message }),
+      }),
+    close: (tournamentId: string) =>
+      request<{ message: string }>(`/tournaments/${tournamentId}/close`, { method: "POST" }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/tournaments/${id}`, { method: "DELETE" }),
   },
   teams: {
     list: () => request<import("../types").Team[]>("/teams"),
@@ -73,10 +82,48 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ score1, score2 }),
       }),
+    approveScore: (matchId: string) =>
+      request<import("../types").Match>(`/matches/${matchId}/approve-score`, { method: "POST" }),
+    forfeit: (matchId: string) =>
+      request<import("../types").Match>(`/matches/${matchId}/forfeit`, { method: "POST" }),
+    delay: (matchId: string, reason?: string) =>
+      request<import("../types").Match>(`/matches/${matchId}/delay`, { method: "POST", body: JSON.stringify({ reason }) }),
+    contactOrganizer: (matchId: string, message: string) =>
+      request<{ message: string }>(`/matches/${matchId}/contact-organizer`, { method: "POST", body: JSON.stringify({ message }) }),
+    remindScore: (matchId: string) =>
+      request<{ message: string }>(`/matches/${matchId}/remind-score`, { method: "POST" }),
   },
   users: {
     leaderboard: () =>
       request<{ id: string; username: string; avatar?: string; tournamentsPlayed: number }[]>("/users/leaderboard"),
-    get: (id: string) => request<import("../types").User & { teams: import("../types").TeamMember[] }>(`/users/${id}`),
+    get: (id: string) =>
+      request<import("../types").User & { teams: import("../types").TeamMember[] }>(`/users/${id}`),
+  },
+  notifications: {
+    list: () =>
+      request<{ id: string; userId: string; type: string; title: string; message: string; link?: string; read: boolean; createdAt: string }[]>("/notifications"),
+    unreadCount: () =>
+      request<{ count: number }>("/notifications/unread-count"),
+    markRead: (id: string) =>
+      request<{ message: string }>(`/notifications/${id}/read`, { method: "PATCH" }),
+    seed: () =>
+      request<{ created: number }>("/notifications/seed", { method: "POST" }),
+  },
+  password: {
+    forgot: (email: string) =>
+      request<{ message: string }>("/password/forgot", { method: "POST", body: JSON.stringify({ email }) }),
+    reset: (token: string, password: string) =>
+      request<{ message: string }>("/password/reset", { method: "POST", body: JSON.stringify({ token, password }) }),
+  },
+  disputes: {
+    create: (data: { matchId: string; tournamentId: string; reason: string; details?: string }) =>
+      request<any>("/disputes", { method: "POST", body: JSON.stringify(data) }),
+    list: (tournamentId?: string) =>
+      request<any[]>(`/disputes${tournamentId ? `?tournamentId=${tournamentId}` : ""}`),
+    resolve: (id: string, status: string, resolution?: string) =>
+      request<any>(`/disputes/${id}/resolve`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, resolution }),
+      }),
   },
 };
