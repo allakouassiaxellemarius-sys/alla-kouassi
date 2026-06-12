@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import prisma from "../prisma/client.js";
 import { generateToken, authMiddleware, AuthRequest } from "../middleware/auth.js";
 
